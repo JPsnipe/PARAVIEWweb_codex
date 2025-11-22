@@ -37,6 +37,19 @@ state.probe_label = "Click on the furnace to probe temperature"
 state.case_items = list(CASE_VARIANTS.keys())
 state.material_table = pipeline.material_table
 state.block_table = pipeline.block_table
+state.metric_min = 0.0
+state.metric_max = 0.0
+state.metric_avg = 0.0
+state.metric_hot_zone = "N/A"
+state.metric_hot_material = "N/A"
+state.metric_hot_peak = 0.0
+state.metric_min_label = "0 °C"
+state.metric_max_label = "0 °C"
+state.metric_avg_label = "0 °C"
+state.metric_hot_peak_label = "0 °C"
+state.health_score = 90.0
+state.thermal_status = "Nominal"
+state.thermal_status_color = "success"
 
 # --------------------------------------------------------------------------- #
 # Chart helpers
@@ -46,6 +59,38 @@ state.chart_times = list(range(WINDOW))
 state.chart_sim = [1150 + 30 * math.sin(i / 9.0) for i in state.chart_times]
 state.chart_sensor = [value + random.uniform(-5, 5) for value in state.chart_sim]
 chart_widget = None
+
+
+def refresh_metrics():
+    metrics = getattr(pipeline, "metrics", {}) or {}
+    state.metric_min = metrics.get("min", 0.0)
+    state.metric_max = metrics.get("max", 0.0)
+    state.metric_avg = metrics.get("avg", 0.0)
+    state.metric_hot_zone = metrics.get("hot_block", "N/A")
+    state.metric_hot_material = metrics.get("hot_material", "N/A")
+    state.metric_hot_peak = metrics.get("hot_tmax", 0.0)
+    state.metric_min_label = f"{state.metric_min:.0f} °C"
+    state.metric_max_label = f"{state.metric_max:.0f} °C"
+    state.metric_avg_label = f"{state.metric_avg:.0f} °C"
+    state.metric_hot_peak_label = f"{state.metric_hot_peak:.0f} °C"
+
+    max_val = state.metric_max
+    span = pipeline.color_range[1] - pipeline.color_range[0]
+    normalized = (max_val - pipeline.color_range[0]) / span if span else 0.0
+    health_score = max(5.0, min(100.0, 100.0 - normalized * 60.0))
+    state.health_score = round(health_score, 1)
+
+    if max_val >= 1400:
+        status, color = "Critical", "error"
+    elif max_val >= 1200:
+        status, color = "Watch", "warning"
+    else:
+        status, color = "Nominal", "success"
+    state.thermal_status = status
+    state.thermal_status_color = color
+
+
+refresh_metrics()
 
 
 def build_chart(x, sim, sensor):
@@ -146,6 +191,7 @@ def on_case_change(case_name, **_):
     state.clip_z_max = zmax
     state.material_table = pipeline.material_table
     state.block_table = pipeline.block_table
+    refresh_metrics()
     ctrl.view_update()
 
 
@@ -189,6 +235,11 @@ def on_pan(dx=0.0, dy=0.0):
     ctrl.view_update()
 
 
+def on_view_preset(preset):
+    pipeline.camera_view(preset)
+    ctrl.view_update()
+
+
 # --------------------------------------------------------------------------- #
 # UI
 # --------------------------------------------------------------------------- #
@@ -215,6 +266,141 @@ with SinglePageLayout(server) as layout:
 
     with layout.content:
         with vuetify.VContainer(fluid=True, class_="fill-height pa-0"):
+            with vuetify.VRow(no_gutters=True, class_="px-2 pt-2"):
+                with vuetify.VCol(cols=12):
+                    with vuetify.VSheet(
+                        class_="pa-4",
+                        elevation=2,
+                        style="background: linear-gradient(120deg, #0f1325, #171c32); color: #e8ecff; border-radius: 12px;",
+                    ):
+                        with vuetify.VRow(align="center", class_="ma-0"):
+                            with vuetify.VCol(cols=12, md=7, class_="py-3"):
+                                vuetify.VChip(
+                                    f"{state.thermal_status} envelope",
+                                    color=("thermal_status_color", state.thermal_status_color),
+                                    class_="text-uppercase font-weight-bold mb-2",
+                                    variant="flat",
+                                    density="comfortable",
+                                )
+                                vuetify.Html(
+                                    tag="div",
+                                    children=["Perfil térmico del horno"],
+                                    class_="text-h5 font-weight-bold mb-1",
+                                )
+                                vuetify.Html(
+                                    tag="div",
+                                    children=[
+                                        "Dashboard inspirado en los ejemplos Trame (p.ej. Arrow Flow) con métricas rápidas y controles curados.",
+                                    ],
+                                    class_="text-body-2 mb-3",
+                                )
+                                vuetify.VProgressLinear(
+                                    value=("health_score", state.health_score),
+                                    color=("thermal_status_color", state.thermal_status_color),
+                                    height=10,
+                                    rounded=True,
+                                    striped=True,
+                                    class_="mb-1",
+                                )
+                                vuetify.Html(
+                                    tag="div",
+                                    children=["Integridad térmica basada en pico y rango de color"],
+                                    class_="text-caption text-medium-emphasis",
+                                )
+                                with vuetify.VRow(no_gutters=True, class_="mt-2"):
+                                    with vuetify.VCol(cols=12, sm=4, class_="pr-sm-2 pb-2"):
+                                        with vuetify.VSheet(
+                                            class_="pa-3",
+                                            elevation=0,
+                                            style="background-color: rgba(255,255,255,0.08); border-radius: 12px;",
+                                        ):
+                                            vuetify.VCardSubtitle("Pico térmico", class_="text-caption text-medium-emphasis pb-1")
+                                            vuetify.VCardTitle(
+                                                class_="text-h6 font-weight-bold",
+                                                v_text=("metric_max_label", state.metric_max_label),
+                                            )
+                                            vuetify.VChip("Máx", color="orange", variant="outlined", density="comfortable")
+
+                                    with vuetify.VCol(cols=12, sm=4, class_="pr-sm-2 pb-2"):
+                                        with vuetify.VSheet(
+                                            class_="pa-3",
+                                            elevation=0,
+                                            style="background-color: rgba(255,255,255,0.08); border-radius: 12px;",
+                                        ):
+                                            vuetify.VCardSubtitle("Promedio", class_="text-caption text-medium-emphasis pb-1")
+                                            vuetify.VCardTitle(
+                                                class_="text-h6 font-weight-bold",
+                                                v_text=("metric_avg_label", state.metric_avg_label),
+                                            )
+                                            vuetify.VChip("Media", color="primary", variant="outlined", density="comfortable")
+
+                                    with vuetify.VCol(cols=12, sm=4, class_="pb-2"):
+                                        with vuetify.VSheet(
+                                            class_="pa-3",
+                                            elevation=0,
+                                            style="background-color: rgba(255,255,255,0.08); border-radius: 12px;",
+                                        ):
+                                            vuetify.VCardSubtitle("Mínimo", class_="text-caption text-medium-emphasis pb-1")
+                                            vuetify.VCardTitle(
+                                                class_="text-h6 font-weight-bold",
+                                                v_text=("metric_min_label", state.metric_min_label),
+                                            )
+                                            vuetify.VChip("Frío", color="cyan", variant="outlined", density="comfortable")
+
+                            with vuetify.VCol(cols=12, md=5, class_="py-3"):
+                                with vuetify.VSheet(
+                                    class_="pa-3",
+                                    elevation=0,
+                                    style="background-color: rgba(0,0,0,0.32); border-radius: 12px;",
+                                ):
+                                    vuetify.VCardTitle("Vistas rápidas y zona caliente")
+                                    vuetify.VCardText(
+                                        class_="text-body-2",
+                                        children=["Cambia la cámara y ubica la región crítica sin dejar el flujo principal."],
+                                    )
+                                    with vuetify.VRow(dense=True, class_="mb-2"):
+                                        vuetify.VBtn(
+                                            "Frente",
+                                            color="primary",
+                                            variant="flat",
+                                            class_="mr-2 mb-2",
+                                            prepend_icon="mdi-axis-x-arrow",
+                                            click=lambda *_: on_view_preset("front"),
+                                        )
+                                        vuetify.VBtn(
+                                            "Lateral",
+                                            color="primary",
+                                            variant="flat",
+                                            class_="mr-2 mb-2",
+                                            prepend_icon="mdi-axis-y-arrow",
+                                            click=lambda *_: on_view_preset("side"),
+                                        )
+                                        vuetify.VBtn(
+                                            "Cenital",
+                                            color="primary",
+                                            variant="flat",
+                                            class_="mb-2",
+                                            prepend_icon="mdi-axis-z-arrow",
+                                            click=lambda *_: on_view_preset("top"),
+                                        )
+                                    vuetify.VDivider(class_="my-2")
+                                    with vuetify.VList(density="compact"):
+                                        vuetify.VListItem(
+                                            title="Zona más caliente",
+                                            subtitle=("metric_hot_zone", state.metric_hot_zone),
+                                            prepend_icon="mdi-fire",
+                                        )
+                                        vuetify.VListItem(
+                                            title="Material dominante",
+                                            subtitle=("metric_hot_material", state.metric_hot_material),
+                                            prepend_icon="mdi-beaker",
+                                        )
+                                        vuetify.VListItem(
+                                            title="Pico local",
+                                            subtitle=("metric_hot_peak_label", state.metric_hot_peak_label),
+                                            prepend_icon="mdi-thermometer",
+                                        )
+
             with vuetify.VRow(no_gutters=True, class_="fill-height"):
                 with vuetify.VCol(cols=12, md=4, lg=3, class_="pa-2", style="max-width: 360px;"):
                     with vuetify.VSheet(class_="pa-3", elevation=1, style="background-color: #0f1118;"):
@@ -310,6 +496,20 @@ with SinglePageLayout(server) as layout:
                                 children=[vuetify.VAlert(text=("probe_label", state.probe_label), dense=True, outlined=True)]
                             )
 
+                        with vuetify.VCard(flat=True, class_="mb-4"):
+                            vuetify.VCardTitle("Cámara curada")
+                            with vuetify.VCardText():
+                                vuetify.VBtn(
+                                    "Reset", icon="mdi-crosshairs-gps", color="secondary", class_="mr-2 mb-2", click=on_reset_camera
+                                )
+                                vuetify.VBtn(
+                                    "Frente", icon="mdi-axis-x-arrow", class_="mr-2 mb-2", variant="outlined", click=lambda *_: on_view_preset("front")
+                                )
+                                vuetify.VBtn(
+                                    "Lateral", icon="mdi-axis-y-arrow", class_="mr-2 mb-2", variant="outlined", click=lambda *_: on_view_preset("side")
+                                )
+                                vuetify.VBtn("Cenital", icon="mdi-axis-z-arrow", class_="mb-2", variant="outlined", click=lambda *_: on_view_preset("top"))
+
                         with vuetify.VCard(flat=True):
                             vuetify.VCardTitle("Real-Time Comparison")
                             with vuetify.VCardText():
@@ -322,7 +522,7 @@ with SinglePageLayout(server) as layout:
                     view = vtk_widgets.VtkRemoteView(
                         pipeline.render_window,
                         interactive_ratio=1,
-                        style="height: calc(100vh - 72px); width: 100%; background-color: #0a0c12;",
+                        style="height: calc(100vh - 180px); width: 100%; background-color: #0a0c12;",
                     )
                     ctrl.view_update = view.update
                     ready = getattr(view, "on_ready", None)
