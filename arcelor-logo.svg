@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" role="img" aria-label="ArcelorMittal logo">
+  <defs>
+    <style>
+      .arc { fill: none; stroke: #ef6c1a; stroke-width: 8; stroke-linecap: round; }
+      .text { fill: #4a4a4a; font-family: 'Segoe UI', Arial, sans-serif; font-size: 32px; font-weight: 600; }
+    </style>
+  </defs>
+  <path class="arc" d="M24 42c52-28 102-22 150 6" />
+  <path class="arc" d="M58 34c38-18 70-16 108 4" stroke-width="6" />
+  <text class="text" x="26" y="70">ArcelorMittal</text>
+</svg>
