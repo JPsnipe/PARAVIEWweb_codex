@@ -273,6 +273,25 @@ with SinglePageLayout(server) as layout:
                         elevation=2,
                         style="background: linear-gradient(120deg, #0f1325, #171c32); color: #e8ecff; border-radius: 12px;",
                     ):
+                        with vuetify.VRow(class_="ma-0 mb-3 align-center"):
+                            vuetify.VChip(
+                                "Desarrollado por SDEA Solutions",
+                                color="#ffe9dc",
+                                class_="text-body-2 font-weight-medium mr-2",
+                                style="color: #a9470d;",
+                                variant="elevated",
+                                density="comfortable",
+                            )
+                            vuetify.VChip(
+                                color="#fff7f1",
+                                class_="text-body-2 font-weight-bold",
+                                variant="outlined",
+                                density="comfortable",
+                                children=[
+                                    vuetify.VAvatar(size=28, image="arcelor-logo.svg", class_="mr-2"),
+                                    vuetify.Html(tag="span", children=["ArcelorMittal"]),
+                                ],
+                            )
                         with vuetify.VRow(align="center", class_="ma-0"):
                             with vuetify.VCol(cols=12, md=7, class_="py-3"):
                                 vuetify.VChip(
