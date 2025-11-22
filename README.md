@@ -41,7 +41,19 @@ pip install -r requirements.txt
 python app.py
 ```
 
-La aplicación estará disponible en `http://localhost:8080`
+La aplicación estará disponible en `http://localhost:9012`
+
+### Acceso Remoto con ngrok
+
+Para acceder desde móvil/tablet fuera de tu red local:
+
+```bash
+# Iniciar túnel ngrok
+ngrok http 9012
+```
+
+Luego accede desde cualquier dispositivo usando la URL que te proporciona ngrok.
+Ver [REMOTE_ACCESS.md](REMOTE_ACCESS.md) para más detalles.
 
 ## Estructura del Proyecto
 
