@@ -357,6 +357,7 @@ class FurnacePipeline:
         pid = self.probe_locator.FindClosestPoint(pos)
         data = self.shell_probe.GetOutput()
         temperature_array = data.GetPointData().GetArray("Temperature")
+        material_array = data.GetPointData().GetArray("MaterialId")
 
         if pid < 0 or temperature_array is None:
             return None
@@ -384,6 +385,9 @@ class FurnacePipeline:
         temps = self.temperature_data.GetPointData().GetArray("Temperature")
         mats = self.temperature_data.GetPointData().GetArray("MaterialId")
         npts = self.temperature_data.GetNumberOfPoints()
+        temp_sum = 0.0
+        temp_min = float("inf")
+        temp_max = float("-inf")
         for pid in range(npts):
             x, y, z = self.temperature_data.GetPoint(pid)
             r = math.sqrt(x * x + y * y)
@@ -396,6 +400,9 @@ class FurnacePipeline:
             key = f"{band} - {layer}"
             mid = int(mats.GetTuple1(pid)) if mats else -1
             temp = float(temps.GetTuple1(pid))
+            temp_sum += temp
+            temp_min = min(temp_min, temp)
+            temp_max = max(temp_max, temp)
             if key not in accum:
                 accum[key] = {"count": 0, "sum": 0.0, "min": 1e9, "max": -1e9, "material_id": mid, "band": band, "layer": layer}
             acc = accum[key]
@@ -420,6 +427,17 @@ class FurnacePipeline:
                     "layer": acc["layer"],
                 }
             )
+
+        hot_block = max(self.block_table, key=lambda entry: entry["t_max"], default=None)
+        avg_temperature = temp_sum / npts if npts else 0.0
+        self.metrics = {
+            "min": round(temp_min if npts else 0.0, 1),
+            "max": round(temp_max if npts else 0.0, 1),
+            "avg": round(avg_temperature, 1),
+            "hot_block": hot_block["name"] if hot_block else "N/A",
+            "hot_material": hot_block["material"] if hot_block else "N/A",
+            "hot_tmax": hot_block["t_max"] if hot_block else 0.0,
+        }
 
     # ------------------------------------------------------------------ #
     # Camera helpers
@@ -458,3 +476,21 @@ class FurnacePipeline:
         cam.SetPosition(*pos)
         self.renderer.ResetCameraClippingRange()
         self.render_window.Render()
+
+    def camera_view(self, preset: str):
+        cam = self.renderer.GetActiveCamera()
+        distance = self.outer_radius * 2.6
+        height_offset = self.height * 0.55
+        presets = {
+            "front": ((distance, 0.0, height_offset), (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+            "side": ((0.0, -distance, height_offset * 0.5), (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+            "top": ((0.0, 0.0, distance * 0.8), (0.0, 0.0, 0.0), (0.0, 1.0, 0.0)),
+        }
+
+        if preset in presets:
+            pos, focal, view_up = presets[preset]
+            cam.SetPosition(*pos)
+            cam.SetFocalPoint(*focal)
+            cam.SetViewUp(*view_up)
+            self.renderer.ResetCameraClippingRange()
+            self.render_window.Render()
