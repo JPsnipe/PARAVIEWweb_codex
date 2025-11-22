@@ -1,0 +1,7 @@
+trame>=3.10.0
+trame-vuetify>=3.0.0
+trame-vtk>=2.7.0
+trame-plotly>=3.0.0
+vtk>=9.2.0
+plotly>=5.18.0
+pandas>=2.0.0
