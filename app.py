@@ -50,6 +50,13 @@ state.metric_hot_peak_label = "0 °C"
 state.health_score = 90.0
 state.thermal_status = "Nominal"
 state.thermal_status_color = "success"
+state.color_map_name = "Inferno"
+state.color_map_options = ["Inferno", "Viridis", "Plasma", "Turbo"]
+state.scalar_bar_font_size = 12
+state.background_style = "Nocturno"
+state.background_options = ["Nocturno", "Acero azul", "Bruma"]
+state.show_shell = True
+state.show_iso = True
 
 # --------------------------------------------------------------------------- #
 # Chart helpers
@@ -91,6 +98,10 @@ def refresh_metrics():
 
 
 refresh_metrics()
+pipeline.update_color_map(state.color_map_name)
+pipeline.update_scalar_bar_style(state.scalar_bar_font_size)
+pipeline.update_background(state.background_style)
+pipeline.update_visibilities(state.show_shell, state.show_iso)
 
 
 def build_chart(x, sim, sensor):
@@ -195,6 +206,30 @@ def on_case_change(case_name, **_):
     ctrl.view_update()
 
 
+@state.change("color_map_name")
+def on_color_map_change(color_map_name, **_):
+    pipeline.update_color_map(color_map_name)
+    ctrl.view_update()
+
+
+@state.change("scalar_bar_font_size")
+def on_scalar_bar_change(scalar_bar_font_size, **_):
+    pipeline.update_scalar_bar_style(scalar_bar_font_size)
+    ctrl.view_update()
+
+
+@state.change("background_style")
+def on_background_change(background_style, **_):
+    pipeline.update_background(background_style)
+    ctrl.view_update()
+
+
+@state.change("show_shell", "show_iso")
+def on_visibility_change(show_shell, show_iso, **_):
+    pipeline.update_visibilities(show_shell, show_iso)
+    ctrl.view_update()
+
+
 def on_reset_camera():
     pipeline.reset_camera()
     ctrl.view_update()
@@ -245,24 +280,6 @@ def on_view_preset(preset):
 # --------------------------------------------------------------------------- #
 with SinglePageLayout(server) as layout:
     layout.title.set_text("Blast Furnace Thermal Watch (Trame prototype)")
-
-    with layout.toolbar:
-        vuetify.VBtn(
-            "Reset Camera",
-            icon="mdi-crosshairs-gps",
-            click=on_reset_camera,
-            outlined=True,
-            dense=True,
-        )
-        vuetify.VBtn(icon="mdi-undo-variant", dense=True, title="Orbit Left", click=lambda *_: on_orbit("left"))
-        vuetify.VBtn(icon="mdi-redo-variant", dense=True, title="Orbit Right", click=lambda *_: on_orbit("right"))
-        vuetify.VBtn(icon="mdi-arrow-up-bold", dense=True, title="Orbit Up", click=lambda *_: on_orbit("up"))
-        vuetify.VBtn(icon="mdi-arrow-down-bold", dense=True, title="Orbit Down", click=lambda *_: on_orbit("down"))
-        vuetify.VBtn(icon="mdi-magnify-plus", dense=True, title="Zoom In", click=lambda *_: on_zoom(1.2))
-        vuetify.VBtn(icon="mdi-magnify-minus", dense=True, title="Zoom Out", click=lambda *_: on_zoom(0.8))
-        vuetify.VBtn(icon="mdi-cursor-move", dense=True, title="Pan Up", click=lambda *_: on_pan(0, 1))
-        vuetify.VBtn(icon="mdi-cursor-move", dense=True, title="Pan Down", class_="rotate-180", click=lambda *_: on_pan(0, -1))
-        vuetify.VSpacer()
 
     with layout.content:
         with vuetify.VContainer(fluid=True, class_="fill-height pa-0"):
@@ -529,6 +546,48 @@ with SinglePageLayout(server) as layout:
                                 )
                                 vuetify.VBtn("Cenital", icon="mdi-axis-z-arrow", class_="mb-2", variant="outlined", click=lambda *_: on_view_preset("top"))
 
+                        with vuetify.VCard(flat=True, class_="mb-4"):
+                            vuetify.VCardTitle("Parámetros expertos")
+                            with vuetify.VCardText():
+                                with vuetify.VExpansionPanels(variant="accordion"):
+                                    with vuetify.VExpansionPanel():
+                                        vuetify.VExpansionPanelTitle(
+                                            "Escala de color y escena", class_="text-subtitle-2 font-weight-medium"
+                                        )
+                                        with vuetify.VExpansionPanelText():
+                                            vuetify.VSelect(
+                                                label="Patrón de colores",
+                                                v_model=("color_map_name", state.color_map_name),
+                                                items=("color_map_options", state.color_map_options),
+                                                dense=True,
+                                                hide_details=True,
+                                                outlined=True,
+                                            )
+                                            vuetify.VSlider(
+                                                label="Fuente de la escala",
+                                                v_model=("scalar_bar_font_size", state.scalar_bar_font_size),
+                                                min=8,
+                                                max=24,
+                                                step=1,
+                                                dense=True,
+                                                hide_details=False,
+                                            )
+                                            vuetify.VSelect(
+                                                label="Fondo del visor 3D",
+                                                v_model=("background_style", state.background_style),
+                                                items=("background_options", state.background_options),
+                                                dense=True,
+                                                hide_details=True,
+                                                outlined=True,
+                                            )
+                                            with vuetify.VRow(no_gutters=True, class_="mt-2"):
+                                                vuetify.VSwitch(
+                                                    label="Mostrar shell", v_model=("show_shell", state.show_shell), inset=True
+                                                )
+                                                vuetify.VSwitch(
+                                                    label="Mostrar isoterma", v_model=("show_iso", state.show_iso), inset=True
+                                                )
+
                         with vuetify.VCard(flat=True):
                             vuetify.VCardTitle("Real-Time Comparison")
                             with vuetify.VCardText():
@@ -538,22 +597,54 @@ with SinglePageLayout(server) as layout:
                                 )
 
                 with vuetify.VCol(cols=12, md=6, lg=6, class_="pa-0"):
-                    view = vtk_widgets.VtkRemoteView(
-                        pipeline.render_window,
-                        interactive_ratio=1,
-                        style="height: calc(100vh - 180px); width: 100%; background-color: #0a0c12;",
-                    )
-                    ctrl.view_update = view.update
-                    ready = getattr(view, "on_ready", None)
-                    if ready:
-                        ready.add(on_reset_camera)
-                    else:
-                        on_reset_camera()
+                    with vuetify.VSheet(
+                        class_="pa-3",
+                        elevation=1,
+                        style="background-color: #0b0d16; border-radius: 12px;",
+                    ):
+                        with vuetify.VRow(class_="ma-0 mb-2 align-center"):
+                            vuetify.Html(
+                                tag="div",
+                                children=["Cámara y navegación"],
+                                class_="text-subtitle-1 font-weight-medium",
+                            )
+                            vuetify.VSpacer()
+                            vuetify.VBtn(
+                                "Reset",
+                                icon="mdi-crosshairs-gps",
+                                color="secondary",
+                                variant="flat",
+                                density="comfortable",
+                                class_="ml-2",
+                                click=on_reset_camera,
+                            )
 
-                    on_click = getattr(view, "on_click", None)
-                    if on_click:
-                        on_click.add(on_probe)
-                    view.update()
+                        with vuetify.VRow(no_gutters=True, class_="ma-0 mb-2", align="center"):
+                            vuetify.VBtn(icon="mdi-undo-variant", density="comfortable", title="Orbit Left", click=lambda *_: on_orbit("left"))
+                            vuetify.VBtn(icon="mdi-redo-variant", density="comfortable", title="Orbit Right", click=lambda *_: on_orbit("right"))
+                            vuetify.VBtn(icon="mdi-arrow-up-bold", density="comfortable", title="Orbit Up", click=lambda *_: on_orbit("up"))
+                            vuetify.VBtn(icon="mdi-arrow-down-bold", density="comfortable", title="Orbit Down", click=lambda *_: on_orbit("down"))
+                            vuetify.VBtn(icon="mdi-magnify-plus", density="comfortable", title="Zoom In", click=lambda *_: on_zoom(1.2))
+                            vuetify.VBtn(icon="mdi-magnify-minus", density="comfortable", title="Zoom Out", click=lambda *_: on_zoom(0.8))
+                            vuetify.VBtn(icon="mdi-cursor-move", density="comfortable", title="Pan Up", click=lambda *_: on_pan(0, 1))
+                            vuetify.VBtn(icon="mdi-cursor-move", density="comfortable", title="Pan Down", class_="rotate-180", click=lambda *_: on_pan(0, -1))
+
+                        view = vtk_widgets.VtkRemoteView(
+                            pipeline.render_window,
+                            interactive_ratio=1,
+                            style="height: calc(100vh - 230px); width: 100%; background-color: #0a0c12;",
+                        )
+                        ctrl.view_update = view.update
+                        ready = getattr(view, "on_ready", None)
+                        if ready:
+                            ready.add(on_reset_camera)
+                        else:
+                            on_reset_camera()
+
+                        on_click = getattr(view, "on_click", None)
+                        if on_click:
+                            on_click.add(on_probe)
+                        view.update()
 
                 with vuetify.VCol(cols=12, md=2, lg=3, class_="pa-2", style="max-width: 360px;"):
                     with vuetify.VSheet(class_="pa-3", elevation=1, style="background-color: #0f1118; height: 100%; overflow-y: auto;"):

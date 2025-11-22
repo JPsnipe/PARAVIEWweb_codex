@@ -50,7 +50,7 @@ class FurnacePipeline:
         self.picker = vtk.vtkCellPicker()
         self.picker.SetTolerance(0.002)
 
-        self.lut = self._build_inferno_lut()
+        self.lut = self._build_lookup_table("Inferno")
         self.scalar_bar = self._build_scalar_bar()
 
         self.clip_plane = vtk.vtkPlane()
@@ -150,14 +150,42 @@ class FurnacePipeline:
 
         self.renderer.AddActor(self.iso_actor)
 
-    def _build_inferno_lut(self) -> vtk.vtkLookupTable:
-        # Approximate Inferno colormap without extra dependencies
+    def _build_lookup_table(self, map_name: str) -> vtk.vtkLookupTable:
+        presets = {
+            "Inferno": [
+                (0.0, (0.0, 0.0, 0.0)),
+                (0.25, (0.22, 0.02, 0.40)),
+                (0.50, (0.68, 0.16, 0.16)),
+                (0.75, (0.98, 0.64, 0.05)),
+                (1.0, (0.99, 0.98, 0.65)),
+            ],
+            "Viridis": [
+                (0.0, (0.267, 0.005, 0.329)),
+                (0.25, (0.283, 0.141, 0.458)),
+                (0.50, (0.254, 0.265, 0.530)),
+                (0.75, (0.207, 0.372, 0.553)),
+                (1.0, (0.993, 0.906, 0.144)),
+            ],
+            "Plasma": [
+                (0.0, (0.050, 0.030, 0.527)),
+                (0.25, (0.302, 0.016, 0.642)),
+                (0.50, (0.575, 0.042, 0.580)),
+                (0.75, (0.837, 0.137, 0.379)),
+                (1.0, (0.940, 0.975, 0.131)),
+            ],
+            "Turbo": [
+                (0.0, (0.189, 0.071, 0.232)),
+                (0.25, (0.140, 0.617, 0.710)),
+                (0.50, (0.735, 0.880, 0.191)),
+                (0.75, (0.976, 0.595, 0.125)),
+                (1.0, (0.705, 0.015, 0.149)),
+            ],
+        }
+
+        stops = presets.get(map_name, presets["Inferno"])
         ctf = vtk.vtkColorTransferFunction()
-        ctf.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
-        ctf.AddRGBPoint(0.25, 0.22, 0.02, 0.40)
-        ctf.AddRGBPoint(0.50, 0.68, 0.16, 0.16)
-        ctf.AddRGBPoint(0.75, 0.98, 0.64, 0.05)
-        ctf.AddRGBPoint(1.0, 0.99, 0.98, 0.65)
+        for pos, (r, g, b) in stops:
+            ctf.AddRGBPoint(pos, r, g, b)
 
         lut = vtk.vtkLookupTable()
         lut.SetNumberOfTableValues(256)
@@ -175,6 +203,37 @@ class FurnacePipeline:
         scalar_bar.SetTitle("Temperature (deg C)")
         scalar_bar.VisibilityOn()
         return scalar_bar
+
+    def update_color_map(self, map_name: str):
+        self.lut = self._build_lookup_table(map_name)
+        self.shell_mapper.SetLookupTable(self.lut)
+        self.iso_mapper.SetLookupTable(self.lut)
+        self.scalar_bar.SetLookupTable(self.lut)
+        self.render_window.Render()
+
+    def update_scalar_bar_style(self, font_size: int = 12):
+        text_props = [self.scalar_bar.GetTitleTextProperty(), self.scalar_bar.GetLabelTextProperty()]
+        for prop in text_props:
+            prop.SetFontSize(int(font_size))
+            prop.SetFontFamilyToArial()
+            prop.SetColor(1.0, 1.0, 1.0)
+        self.scalar_bar.Modified()
+        self.render_window.Render()
+
+    def update_background(self, style: str):
+        presets = {
+            "Nocturno": (0.08, 0.08, 0.10),
+            "Acero azul": (0.06, 0.09, 0.13),
+            "Bruma": (0.14, 0.16, 0.22),
+        }
+        color = presets.get(style, presets["Nocturno"])
+        self.renderer.SetBackground(*color)
+        self.render_window.Render()
+
+    def update_visibilities(self, show_shell: bool, show_iso: bool):
+        self.shell_actor.SetVisibility(1 if show_shell else 0)
+        self.iso_actor.SetVisibility(1 if show_iso else 0)
+        self.render_window.Render()
 
     # --------------------------------------------------------------------- #
     # Data generation
