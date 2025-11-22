@@ -269,11 +269,11 @@ with SinglePageLayout(server) as layout:
             with vuetify.VRow(no_gutters=True, class_="px-2 pt-2"):
                 with vuetify.VCol(cols=12):
                     with vuetify.VSheet(
-                        class_="pa-4",
+                        class_="pa-3 pa-sm-4",
                         elevation=2,
                         style="background: linear-gradient(120deg, #0f1325, #171c32); color: #e8ecff; border-radius: 12px;",
                     ):
-                        with vuetify.VRow(class_="ma-0 mb-3 align-center"):
+                        with vuetify.VRow(class_="ma-0 mb-3 align-center flex-wrap"):
                             vuetify.VChip(
                                 "Desarrollado por SDEA Solutions",
                                 color="#ffe9dc",
@@ -292,8 +292,8 @@ with SinglePageLayout(server) as layout:
                                     vuetify.Html(tag="span", children=["ArcelorMittal"]),
                                 ],
                             )
-                        with vuetify.VRow(align="center", class_="ma-0"):
-                            with vuetify.VCol(cols=12, md=7, class_="py-3"):
+                        with vuetify.VRow(align="stretch", class_="ma-0 flex-column flex-md-row"):
+                            with vuetify.VCol(cols=12, md=7, class_="py-3 pr-md-4"):
                                 vuetify.VChip(
                                     f"{state.thermal_status} envelope",
                                     color=("thermal_status_color", state.thermal_status_color),
@@ -368,7 +368,7 @@ with SinglePageLayout(server) as layout:
 
                             with vuetify.VCol(cols=12, md=5, class_="py-3"):
                                 with vuetify.VSheet(
-                                    class_="pa-3",
+                                    class_="pa-3 h-100",
                                     elevation=0,
                                     style="background-color: rgba(0,0,0,0.32); border-radius: 12px;",
                                 ):
@@ -420,9 +420,13 @@ with SinglePageLayout(server) as layout:
                                             prepend_icon="mdi-thermometer",
                                         )
 
-            with vuetify.VRow(no_gutters=True, class_="fill-height"):
-                with vuetify.VCol(cols=12, md=4, lg=3, class_="pa-2", style="max-width: 360px;"):
-                    with vuetify.VSheet(class_="pa-3", elevation=1, style="background-color: #0f1118;"):
+            with vuetify.VRow(no_gutters=True, class_="fill-height px-2 pb-2 align-stretch"):
+                with vuetify.VCol(cols=12, lg=4, xl=3, class_="pa-2"):
+                    with vuetify.VSheet(
+                        class_="pa-3 d-flex flex-column gap-4",
+                        elevation=1,
+                        style="background-color: #0f1118; height: 100%;",
+                    ):
                         with vuetify.VCard(flat=True, class_="mb-4"):
                             vuetify.VCardTitle("Simulation Case")
                             vuetify.VSelect(
@@ -537,11 +541,11 @@ with SinglePageLayout(server) as layout:
                                     figure=build_chart(state.chart_times, state.chart_sim, state.chart_sensor),
                                 )
 
-                with vuetify.VCol(cols=12, md=6, lg=6, class_="pa-0"):
+                with vuetify.VCol(cols=12, lg=8, xl=6, class_="pa-0"):
                     view = vtk_widgets.VtkRemoteView(
                         pipeline.render_window,
                         interactive_ratio=1,
-                        style="height: calc(100vh - 180px); width: 100%; background-color: #0a0c12;",
+                        style="min-height: 340px; height: 60vh; max-height: calc(100vh - 200px); width: 100%; background-color: #0a0c12; border-radius: 12px;",
                     )
                     ctrl.view_update = view.update
                     ready = getattr(view, "on_ready", None)
@@ -555,9 +559,13 @@ with SinglePageLayout(server) as layout:
                         on_click.add(on_probe)
                     view.update()
 
-                with vuetify.VCol(cols=12, md=2, lg=3, class_="pa-2", style="max-width: 360px;"):
-                    with vuetify.VSheet(class_="pa-3", elevation=1, style="background-color: #0f1118; height: 100%; overflow-y: auto;"):
-                        with vuetify.VCard(flat=True, class_="mb-4"):
+                with vuetify.VCol(cols=12, lg=12, xl=3, class_="pa-2"):
+                    with vuetify.VSheet(
+                        class_="pa-3 d-flex flex-column gap-4",
+                        elevation=1,
+                        style="background-color: #0f1118; height: 100%; overflow-y: auto;",
+                    ):
+                        with vuetify.VCard(flat=True, class_="mb-2"):
                             vuetify.VCardTitle("Materials")
                             vuetify.VDataTable(
                                 headers=[
@@ -571,6 +579,7 @@ with SinglePageLayout(server) as layout:
                                 hide_default_footer=True,
                                 items_per_page=20,
                                 class_="elevation-1",
+                                style="min-width: 260px;",
                             )
 
                         with vuetify.VCard(flat=True):
@@ -589,6 +598,7 @@ with SinglePageLayout(server) as layout:
                                 hide_default_footer=True,
                                 items_per_page=20,
                                 class_="elevation-1",
+                                style="min-width: 260px;",
                             )
 
 if __name__ == "__main__":
