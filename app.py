@@ -270,7 +270,7 @@ def on_pan(dx=0.0, dy=0.0):
 with SinglePageLayout(server) as layout:
     layout.title.set_text("Blast Furnace Thermal Watch (Trame prototype)")
 
-    with layout.toolbar(style="background-color: #ffffff; color: #e15200; border-bottom: 2px solid #e15200;"):
+    with layout.toolbar:
         vuetify.VImg(src=LOGO_DATA_URI, max_height=40, max_width=140, contain=True, class_="mr-4")
         vuetify.VBtn(
             "Reset Camera",
